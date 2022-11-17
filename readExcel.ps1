@@ -1,8 +1,7 @@
-﻿#Entrez un chemin d'accès vers votre fichier d'importation CSV
-$CSVFile = ".\Employes.csv"
-$ADUtilisateurs = $CSVData = Import-CSV -Path $CSVFile -Delimiter ";" -Encoding UTF8
+﻿#Chemin d'accès vers votre fichier d'importation CSV
+$CSVFichier = ".\Employes.csv"
+$ADUtilisateurs = Import-CSV -Path $CSVFichier -Delimiter ";" -Encoding UTF8
 
-#Generation de mot de passe aleatoire
 function Get-RandomPassword {
     param (
         [Parameter(Mandatory)]
@@ -46,35 +45,9 @@ function Get-RandomPassword {
     return $password
 }
 
-
-#securite de charactere pour l'ADDS
-Function Remove-StringSpecialCharacters
+foreach ($User in $ADUtilisateurs)
 {
-
-   Param([string]$String)
-
-   $String -replace 'é', 'e' `
-           -replace 'è', 'e' `
-           -replace 'ç', 'c' `
-           -replace 'ë', 'e' `
-           -replace 'à', 'a' `
-           -replace 'ö', 'o' `
-           -replace 'ô', 'o' `
-           -replace 'ü', 'u' `
-           -replace 'ï', 'i' `
-           -replace 'î', 'i' `
-           -replace 'â', 'a' `
-           -replace 'ê', 'e' `
-           -replace 'û', 'u' `
-           -replace '-', '' `
-           -replace ' ', '' `
-           -replace '/', '' `
-           -replace '\*', '' `
-           -replace "'", "" 
-}
-
-foreach ($Utilisateur in $ADUtilisateurs)
-{
+ 
        $Bureau      = Remove-StringSpecialCharacters $Utilisateur.bureau.ToLower()
        $Prenom   = Remove-StringSpecialCharacters $Utilisateur.prenom.ToLower()
        $Nom    = Remove-StringSpecialCharacters $Utilisateur.nom.ToLower()
@@ -83,5 +56,30 @@ foreach ($Utilisateur in $ADUtilisateurs)
        $UserName = "$Prenom.$Nom"
        $Description = Remove-StringSpecialCharacters $Utilisateur.description.ToLower()
        $NInterne = Remove-StringSpecialCharacters $Utilisateur.n_interne.ToLower()
+
+       if ($UserName.Length -gt 20) {
+            $Prenom = $Prenom.substring(0, 1)
+            $UserName = "$Prenom.$Nom"
+            if ($UserName.Length -gt 20) {
+                $Nom = $Nom.substring(0, 5)
+                $UserName = "$Prenom.$Nom"
+            }
+       }
+
+       
+          
+        #Ajout dans l'AD
+            New-ADUser `
+        -SamAccountName "$UserName" `
+        -UserPrincipalName "$UserName@france.lan" `
+        -Name "$Prenom $Nom" `
+        -GivenName $Prenom `
+        -Surname $Nom `
+        -Enabled $True `
+        -ChangePasswordAtLogon $True `
+        -DisplayName "$Lastname, $Firstname" `
+        -Department $Departement `
+        -Path $OU `
+        -AccountPassword (convertto-securestring $MotDePasse -AsPlainText -Force)
 
 }
