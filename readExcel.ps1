@@ -44,19 +44,42 @@ function Get-RandomPassword {
     }
     return $password
 }
+Function Remove-StringSpecialCharacters
+{
 
+   Param([string]$String)
+
+   $String -replace 'é', 'e' `
+           -replace 'è', 'e' `
+           -replace 'ç', 'c' `
+           -replace 'ë', 'e' `
+           -replace 'à', 'a' `
+           -replace 'ö', 'o' `
+           -replace 'ô', 'o' `
+           -replace 'ü', 'u' `
+           -replace 'ï', 'i' `
+           -replace 'î', 'i' `
+           -replace 'â', 'a' `
+           -replace 'ê', 'e' `
+           -replace 'û', 'u' `
+           -replace '-', '' `
+           -replace ' ', '' `
+           -replace '/', '' `
+           -replace '\*', '' `
+           -replace "'", "" 
+}
 foreach ($User in $ADUtilisateurs)
 {
  
-       $Bureau      = Remove-StringSpecialCharacters $Utilisateur.bureau.ToLower()
-       $Prenom   = Remove-StringSpecialCharacters $Utilisateur.prenom.ToLower()
-       $Nom    = Remove-StringSpecialCharacters $Utilisateur.nom.ToLower()
-       $Departement  = Remove-StringSpecialCharacters $Utilisateur.departement.ToLower()
+       $Bureau      = Remove-StringSpecialCharacters $User.bureau.ToLower()
+       $Prenom   = Remove-StringSpecialCharacters $User.prenom.ToLower()
+       $Nom    = Remove-StringSpecialCharacters $User.nom.ToLower()
+       $Departement  = Remove-StringSpecialCharacters $User.departement.ToLower()
        $MotDePasse = Get-RandomPassword 8
        $UserName = "$Prenom.$Nom"
-       $Description = Remove-StringSpecialCharacters $Utilisateur.description.ToLower()
-       $NInterne = Remove-StringSpecialCharacters $Utilisateur.n_interne.ToLower()
-
+       $Description = Remove-StringSpecialCharacters $User.description.ToLower()
+       $NInterne = Remove-StringSpecialCharacters $User.n_interne.ToLower()
+       
        if ($UserName.Length -gt 20) {
             $Prenom = $Prenom.substring(0, 1)
             $UserName = "$Prenom.$Nom"
@@ -66,8 +89,6 @@ foreach ($User in $ADUtilisateurs)
             }
        }
 
-       
-          
         #Ajout dans l'AD
             New-ADUser `
         -SamAccountName "$UserName" `
