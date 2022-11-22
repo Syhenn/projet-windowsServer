@@ -1,7 +1,16 @@
 ﻿#Chemin d'accès vers votre fichier d'importation CSV
-$CSVFichier = ".\Employes.csv"
+$CSVFichier = "C:\Users\Administrator\Desktop\Employes.csv"
 $ADUtilisateurs = Import-CSV -Path $CSVFichier -Delimiter ";" -Encoding UTF8
 
+#Clear du fichier texte qui contient les mdp
+Clear-Content "C:\Users\Administrator\Desktop\mdp.txt"
+#Créatoin de l'UO Paris
+New-ADOrganizationalUnit -Name 'paris' -Path "DC=france,DC=lan"
+New-ADOrganizationalUnit -Name 'groupes' -Path "OU=paris, DC=france,DC=lan"
+New-ADOrganizationalUnit -Name 'GG' -Path "OU=groupes,OU=paris, DC=france,DC=lan"
+New-ADOrganizationalUnit -Name 'GL' -Path "OU=groupes,OU=paris, DC=france,DC=lan"
+
+#Génération mot de passe aléatoire
 function Get-RandomPassword {
     param (
         [Parameter(Mandatory)]
@@ -44,6 +53,8 @@ function Get-RandomPassword {
     }
     return $password
 }
+
+#securite de caractère pour l'ADDS
 Function Remove-StringSpecialCharacters
 {
 
@@ -68,39 +79,104 @@ Function Remove-StringSpecialCharacters
            -replace '\*', '' `
            -replace "'", "" 
 }
-foreach ($User in $ADUtilisateurs)
+
+#Fonction qui vérifie si une UO existe ou pas
+function checkIfOuExists{
+
+param(
+
+    [parameter(Mandatory)]
+
+    [string]$nameOfOU
+
+)
+
+$existingOU = Get-ADOrganizationalUnit -Filter 'Name -like "$nameOfOU"'
+
+if($existingOU -eq $null){
+    return $false
+}
+else{
+    return $true
+}
+
+}
+
+foreach ($Utilisateur in $ADUtilisateurs)
 {
- 
-       $Bureau      = Remove-StringSpecialCharacters $User.bureau.ToLower()
-       $Prenom   = Remove-StringSpecialCharacters $User.prenom.ToLower()
-       $Nom    = Remove-StringSpecialCharacters $User.nom.ToLower()
-       $Departement  = Remove-StringSpecialCharacters $User.departement.ToLower()
-       $MotDePasse = Get-RandomPassword 8
-       $UserName = "$Prenom.$Nom"
-       $Description = Remove-StringSpecialCharacters $User.description.ToLower()
-       $NInterne = Remove-StringSpecialCharacters $User.n_interne.ToLower()
-       
-       if ($UserName.Length -gt 20) {
+    $Bureau      = Remove-StringSpecialCharacters $Utilisateur.bureau.ToLower()
+    $Prenom   = Remove-StringSpecialCharacters $Utilisateur.prenom.ToLower()
+    $Nom    = Remove-StringSpecialCharacters $Utilisateur.nom.ToLower()
+    $Departement  = $Utilisateur.departement.ToLower()
+    $DepartementSplit = $Departement.split('/')
+    $DepartementParent = Remove-StringSpecialCharacters $DepartementSplit[1]
+    $DepartementEnfant = Remove-StringSpecialCharacters $DepartementSplit[0]
+    $MotDePasse = Get-RandomPassword 7
+    $UserName = "$Prenom.$Nom"
+    $Description = Remove-StringSpecialCharacters $Utilisateur.description.ToLower()
+    $NInterne = Remove-StringSpecialCharacters $Utilisateur.n_interne.ToLower()
+    $OU = "OU=$DepartementEnfant,OU=$DepartementParent,OU=paris,DC=france,DC=lan"
+
+    if ($UserName.Length -gt 20) {
             $Prenom = $Prenom.substring(0, 1)
             $UserName = "$Prenom.$Nom"
             if ($UserName.Length -gt 20) {
-                $Nom = $Nom.substring(0, 5)
+                $Nom = $Nom.substring(0, 18)
                 $UserName = "$Prenom.$Nom"
             }
-       }
+    }
+    if($DepartementParent -eq ""){
+        $DepartementParent = $DepartementEnfant
+        $OU = "OU=$DepartementParent,OU=paris,DC=france,DC=lan"
+        if ($existingOU = Get-ADOrganizationalUnit -Filter "Name -like '$DepartementParent'"){
+            Write-Warning "$DepartementParent existe."
+        }
+        else{
+            New-ADOrganizationalUnit -Name $DepartementParent -Path "OU=paris,DC=france,DC=lan"
+            New-ADGroup -Name "GG_$DepartementParent" -SamAccountName GG_$DepartementParent -GroupCategory Security -GroupScope Global -DisplayName "$DepartementParent" -Path "OU=GG,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe global $DepartementParent"
+            New-ADGroup -Name "GL_$DepartementParent._R" -SamAccountName GL_$DepartementParent.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.R" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local DepartementParent"
+            New-ADGroup -Name "GL_$DepartementParent._RW" -SamAccountName GL_$DepartementParent.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.RW" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local DepartementParent"
+        }
+    }
 
-        #Ajout dans l'AD
-            New-ADUser `
-        -SamAccountName "$UserName" `
-        -UserPrincipalName "$UserName@france.lan" `
-        -Name "$Prenom $Nom" `
-        -GivenName $Prenom `
-        -Surname $Nom `
-        -Enabled $True `
-        -ChangePasswordAtLogon $True `
-        -DisplayName "$Lastname, $Firstname" `
-        -Department $Departement `
-        -Path $OU `
-        -AccountPassword (convertto-securestring $MotDePasse -AsPlainText -Force)
+    if ($existingOU = Get-ADOrganizationalUnit -Filter "Name -like '$DepartementEnfant'"){
+            Write-Warning "$DepartementParent existe."
+    }
+    else{
+        if ($existingOU = Get-ADOrganizationalUnit -Filter "Name -like '$DepartementParent'"){
+            Write-Warning "$DepartementParent existe."
+            New-ADOrganizationalUnit -Name $DepartementEnfant -Path "OU=$DepartementParent,OU=paris,DC=france,DC=lan"
+            New-ADGroup -Name "GL_$DepartementEnfant._R" -SamAccountName GL_$DepartementEnfant.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.R" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local $DepartementEnfant"
+            New-ADGroup -Name "GL_$DepartementEnfant._RW" -SamAccountName GL_$DepartementEnfant.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.RW" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local $DepartementEnfant"
+
+        }
+        else{
+            New-ADOrganizationalUnit -Name $DepartementParent -Path "OU=paris,DC=france,DC=lan"
+            New-ADGroup -Name "GG_$DepartementParent" -SamAccountName GG_$DepartementParent -GroupCategory Security -GroupScope Global -DisplayName "GG_$DepartementParent" -Path "OU=GG,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe global $DepartementParent"
+            New-ADOrganizationalUnit -Name $DepartementEnfant -Path "OU=$DepartementParent,OU=paris,DC=france,DC=lan"
+            New-ADGroup -Name "GL_$DepartementEnfant._R" -SamAccountName GL_$DepartementEnfant.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.R" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local $DepartementEnfant"
+            New-ADGroup -Name "GL_$DepartementEnfant._RW" -SamAccountName GL_$DepartementEnfant.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.RW" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local $DepartementEnfant"
+
+        }
+    }
+        
+    #Ajout dans l'AD
+    New-ADUser `
+    -SamAccountName "$UserName" `
+    -UserPrincipalName "$UserName@france.lan" `
+    -Name "$Prenom $Nom" `
+    -GivenName $Prenom `
+    -Surname $Nom `
+    -Enabled $True `
+    -EmployeeNumber $NInterne `
+    -ChangePasswordAtLogon $True `
+    -DisplayName "$Nom, $Prenom" `
+    -Department $Departement `
+    -Path $OU `
+    -AccountPassword (convertto-securestring $MotDePasse -AsPlainText -Force)
+
+    Add-ADGroupMember -Identity "GG_$DepartementParent" -Members $UserName
+
+    ADD-content -path "C:\Users\Administrator\Desktop\mdp.txt" -value "UserName : $UserName             Mot de passe : $MotDePasse"
 
 }
