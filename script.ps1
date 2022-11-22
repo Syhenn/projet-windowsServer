@@ -178,8 +178,10 @@ foreach ($Utilisateur in $ADUtilisateurs)
     -EmployeeNumber $NInterne `
     -ChangePasswordAtLogon $True `
     -DisplayName "$Nom, $Prenom" `
-    -Department $Departement `
+    -Department $DepartementEnfant `
     -Path $OU `
+    -ipPhone $NInterne `
+    -Office $Bureau `
     -AccountPassword (convertto-securestring $MotDePasse -AsPlainText -Force)
 
     Add-ADGroupMember -Identity "GG_$DepartementEnfant" -Members $UserName
