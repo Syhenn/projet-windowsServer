@@ -2,14 +2,19 @@
 $CSVFichier = "C:\Users\Administrator\Desktop\Employes.csv"
 $ADUtilisateurs = Import-CSV -Path $CSVFichier -Delimiter ";" -Encoding UTF8
 
+#Récupération des informations du domaine
+$domainSplit = $env:USERDNSDOMAIN.ToLower().split('.')
+$domain = $domainSplit[0]
+$domainExt = $domainSplit[1]
+
+
+
 #Clear du fichier texte qui contient les mdp
 Clear-Content "C:\Users\Administrator\Desktop\mdp.txt"
-#Créatoin de l'UO Paris
 
-New-ADOrganizationalUnit -Name 'paris' -Path "DC=france,DC=lan"
-New-ADOrganizationalUnit -Name 'groupes' -Path "OU=paris, DC=france,DC=lan"
-New-ADOrganizationalUnit -Name 'GG' -Path "OU=groupes,OU=paris, DC=france,DC=lan"
-New-ADOrganizationalUnit -Name 'GL' -Path "OU=groupes,OU=paris, DC=france,DC=lan"
+New-ADOrganizationalUnit -Name 'groupes' -Path "DC=$domain,DC=$domainExt"
+New-ADOrganizationalUnit -Name 'GG' -Path "OU=groupes, DC=$domain,DC=$domainExt"
+New-ADOrganizationalUnit -Name 'GL' -Path "OU=groupes, DC=$domain,DC=$domainExt"
 
 #Génération mot de passe aléatoire
 function Get-RandomPassword {
@@ -22,6 +27,7 @@ function Get-RandomPassword {
         [int] $numeric = 1,
         [int] $special = 1
     )
+
     $upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     $lowerCase = "abcdefghijklmnopqrstuvwxyz"
     $numberCase = "0123456789"
@@ -111,31 +117,31 @@ foreach ($Utilisateur in $ADUtilisateurs)
     $DepartementSplit = $Departement.split('/')
     $DepartementParent = Remove-StringSpecialCharacters $DepartementSplit[1]
     $DepartementEnfant = Remove-StringSpecialCharacters $DepartementSplit[0]
-    $MotDePasse = Get-RandomPassword 12
+    $MotDePasse = Get-RandomPassword 7
     $UserName = "$Prenom.$Nom"
     $Description = Remove-StringSpecialCharacters $Utilisateur.description.ToLower()
     $NInterne = Remove-StringSpecialCharacters $Utilisateur.n_interne.ToLower()
-    $OU = "OU=$DepartementEnfant,OU=$DepartementParent,OU=paris,DC=france,DC=lan"
+    $OU = "OU=$DepartementEnfant,OU=$DepartementParent,DC=$domain,DC=$domainExt"
 
     if ($UserName.Length -gt 20) {
-            $Prenom = $Prenom.substring(0, 1)
-            $UserName = "$Prenom.$Nom"
+            $Prenom_coupe = $Prenom.substring(0, 1)
+            $UserName = "$Prenom_coupe.$Nom"
             if ($UserName.Length -gt 20) {
-                $Nom = $Nom.substring(0, 18)
-                $UserName = "$Prenom.$Nom"
+                $Nom_coupe = $Nom.substring(0, 18)
+                $UserName = "$Prenom_coupe.$Nom_coupe"
             }
     }
     if($DepartementParent -eq ""){
         $DepartementParent = $DepartementEnfant
-        $OU = "OU=$DepartementParent,OU=paris,DC=france,DC=lan"
+        $OU = "OU=$DepartementParent,DC=$domain,DC=$domainExt"
         if ($existingOU = Get-ADOrganizationalUnit -Filter "Name -like '$DepartementParent'"){
             Write-Warning "$DepartementParent existe."
         }
         else{
-            New-ADOrganizationalUnit -Name $DepartementParent -Path "OU=paris,DC=france,DC=lan"
-            New-ADGroup -Name "GG_$DepartementParent" -SamAccountName GG_$DepartementParent -GroupCategory Security -GroupScope Global -DisplayName "$DepartementParent" -Path "OU=GG,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe global $DepartementParent"
-            New-ADGroup -Name "GL_$DepartementParent._R" -SamAccountName GL_$DepartementParent.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.R" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local DepartementParent"
-            New-ADGroup -Name "GL_$DepartementParent._RW" -SamAccountName GL_$DepartementParent.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.RW" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local DepartementParent"
+            New-ADOrganizationalUnit -Name $DepartementParent -Path "DC=$domain,DC=$domainExt"
+            New-ADGroup -Name "GG_$DepartementParent" -SamAccountName GG_$DepartementParent -GroupCategory Security -GroupScope Global -DisplayName "$DepartementParent" -Path "OU=GG,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe global $DepartementParent"
+            New-ADGroup -Name "GL_$DepartementParent._R" -SamAccountName GL_$DepartementParent.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.R" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
+            New-ADGroup -Name "GL_$DepartementParent._RW" -SamAccountName GL_$DepartementParent.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.RW" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
         }
     }
 
@@ -143,27 +149,28 @@ foreach ($Utilisateur in $ADUtilisateurs)
             Write-Warning "$DepartementParent existe."
     }
     else{
+        New-ADGroup -Name "GG_$DepartementEnfant" -SamAccountName GG_$DepartementEnfant -GroupCategory Security -GroupScope Global -DisplayName "$DepartementEnfant" -Path "OU=GG,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe global $DepartementParent"
+        New-ADGroup -Name "GL_$DepartementEnfant._R" -SamAccountName GL_$DepartementEnfant.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.R" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local $DepartementEnfant"
+        New-ADGroup -Name "GL_$DepartementEnfant._RW" -SamAccountName GL_$DepartementEnfant.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.RW" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local $DepartementEnfant"
+
         if ($existingOU = Get-ADOrganizationalUnit -Filter "Name -like '$DepartementParent'"){
             Write-Warning "$DepartementParent existe."
-            New-ADOrganizationalUnit -Name $DepartementEnfant -Path "OU=$DepartementParent,OU=paris,DC=france,DC=lan"
-            New-ADGroup -Name "GL_$DepartementEnfant._R" -SamAccountName GL_$DepartementEnfant.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.R" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local $DepartementEnfant"
-            New-ADGroup -Name "GL_$DepartementEnfant._RW" -SamAccountName GL_$DepartementEnfant.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.RW" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local $DepartementEnfant"
+            New-ADOrganizationalUnit -Name $DepartementEnfant -Path "OU=$DepartementParent,DC=$domain,DC=$domainExt"
+
 
         }
         else{
-            New-ADOrganizationalUnit -Name $DepartementParent -Path "OU=paris,DC=france,DC=lan"
-            New-ADGroup -Name "GG_$DepartementParent" -SamAccountName GG_$DepartementParent -GroupCategory Security -GroupScope Global -DisplayName "GG_$DepartementParent" -Path "OU=GG,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe global $DepartementParent"
-            New-ADOrganizationalUnit -Name $DepartementEnfant -Path "OU=$DepartementParent,OU=paris,DC=france,DC=lan"
-            New-ADGroup -Name "GL_$DepartementEnfant._R" -SamAccountName GL_$DepartementEnfant.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.R" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local $DepartementEnfant"
-            New-ADGroup -Name "GL_$DepartementEnfant._RW" -SamAccountName GL_$DepartementEnfant.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.RW" -Path "OU=GL,OU=groupes, OU=paris,DC=france,DC=lan" -Description "Membre du groupe local $DepartementEnfant"
-
+            New-ADOrganizationalUnit -Name $DepartementParent -Path "DC=$domain,DC=$domainExt"
+            New-ADGroup -Name "GG_$DepartementParent" -SamAccountName GG_$DepartementParent -GroupCategory Security -GroupScope Global -DisplayName "GG_$DepartementParent" -Path "OU=GG,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe global $DepartementParent"
+            New-ADOrganizationalUnit -Name $DepartementEnfant -Path "OU=$DepartementParent,DC=$domain,DC=$domainExt"
         }
+        Add-ADGroupMember -Identity "GG_$DepartementParent" -Members GG_$DepartementEnfant
     }
         
     #Ajout dans l'AD
     New-ADUser `
     -SamAccountName "$UserName" `
-    -UserPrincipalName "$UserName@france.lan" `
+    -UserPrincipalName "$UserName@$domain.$domainExt" `
     -Name "$Prenom $Nom" `
     -GivenName $Prenom `
     -Surname $Nom `
@@ -175,7 +182,7 @@ foreach ($Utilisateur in $ADUtilisateurs)
     -Path $OU `
     -AccountPassword (convertto-securestring $MotDePasse -AsPlainText -Force)
 
-    Add-ADGroupMember -Identity "GG_$DepartementParent" -Members $UserName
+    Add-ADGroupMember -Identity "GG_$DepartementEnfant" -Members $UserName
 
     ADD-content -path "C:\Users\Administrator\Desktop\mdp.txt" -value "UserName : $UserName             Mot de passe : $MotDePasse"
 
