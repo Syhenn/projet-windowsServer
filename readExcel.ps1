@@ -5,6 +5,7 @@ $ADUtilisateurs = Import-CSV -Path $CSVFichier -Delimiter ";" -Encoding UTF8
 #Clear du fichier texte qui contient les mdp
 Clear-Content "C:\Users\Administrator\Desktop\mdp.txt"
 #Créatoin de l'UO Paris
+
 New-ADOrganizationalUnit -Name 'paris' -Path "DC=france,DC=lan"
 New-ADOrganizationalUnit -Name 'groupes' -Path "OU=paris, DC=france,DC=lan"
 New-ADOrganizationalUnit -Name 'GG' -Path "OU=groupes,OU=paris, DC=france,DC=lan"
@@ -21,11 +22,10 @@ function Get-RandomPassword {
         [int] $numeric = 1,
         [int] $special = 1
     )
-
     $upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     $lowerCase = "abcdefghijklmnopqrstuvwxyz"
     $numberCase = "0123456789"
-    $specialChar = "/*-+,!?=()@;:._"
+    $specialChar = "/*-!@"
     $defaultChar = ""
     if($upper -gt 0) { $defaultChar += $upperCase }
     if($lower -gt 0) { $defaultChar += $lowerCase }
@@ -111,7 +111,7 @@ foreach ($Utilisateur in $ADUtilisateurs)
     $DepartementSplit = $Departement.split('/')
     $DepartementParent = Remove-StringSpecialCharacters $DepartementSplit[1]
     $DepartementEnfant = Remove-StringSpecialCharacters $DepartementSplit[0]
-    $MotDePasse = Get-RandomPassword 7
+    $MotDePasse = Get-RandomPassword 12
     $UserName = "$Prenom.$Nom"
     $Description = Remove-StringSpecialCharacters $Utilisateur.description.ToLower()
     $NInterne = Remove-StringSpecialCharacters $Utilisateur.n_interne.ToLower()
