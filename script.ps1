@@ -79,6 +79,24 @@ Function Remove-StringSpecialCharacters
            -replace 'â', 'a' `
            -replace 'ê', 'e' `
            -replace 'û', 'u' `
+           -replace 'À','a' `
+           -replace 'Â','a' `
+           -replace 'Ä','a' `
+           -replace 'Ê','e' `
+           -replace 'Ë','e' `
+           -replace 'Æ','ae' `
+           -replace 'É','e' `
+           -replace 'È','e' `
+           -replace 'Î','i' `
+           -replace 'Ï','i' `
+           -replace 'Ô','o' `
+           -replace 'Ö','o' `
+           -replace 'Û','u' `
+           -replace 'Ü','u' `
+           -replace 'æ','ae' `
+           -replace 'Œ','oe' `
+           -replace 'œ','oe' `
+           -replace 'Ù','u' `
            -replace '-', '' `
            -replace ' ', '' `
            -replace '/', '' `
