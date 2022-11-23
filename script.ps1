@@ -159,7 +159,7 @@ foreach ($Utilisateur in $ADUtilisateurs)
             New-ADOrganizationalUnit -Name $DepartementParent -Path "DC=$domain,DC=$domainExt"
             New-ADGroup -Name "GG_$DepartementParent" -SamAccountName GG_$DepartementParent -GroupCategory Security -GroupScope Global -DisplayName "$DepartementParent" -Path "OU=GG,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe global $DepartementParent"
             New-ADGroup -Name "GL_$DepartementParent._R" -SamAccountName GL_$DepartementParent.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.R" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
-            New-ADGroup -Name "GL_$DepartementParent._RW" -SamAccountName GL_$DepartementParent.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.RW" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
+            New-ADGroup -Name "GL_$DepartementParent_RW" -SamAccountName GL_$DepartementParent.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.RW" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
         }
     }
 
@@ -198,10 +198,10 @@ foreach ($Utilisateur in $ADUtilisateurs)
     -DisplayName "$Nom, $Prenom" `
     -Department $DepartementEnfant `
     -Path $OU `
-    -ipPhone $NInterne `
     -Office $Bureau `
     -AccountPassword (convertto-securestring $MotDePasse -AsPlainText -Force)
 
+    Set-ADUser -Identity $UserName -Replace @{ ipPhone = $NInterne }
     Add-ADGroupMember -Identity "GG_$DepartementEnfant" -Members $UserName
 
     ADD-content -path "C:\Users\Administrator\Desktop\mdp.txt" -value "UserName : $UserName             Mot de passe : $MotDePasse"
