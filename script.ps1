@@ -158,8 +158,8 @@ foreach ($Utilisateur in $ADUtilisateurs)
         else{
             New-ADOrganizationalUnit -Name $DepartementParent -Path "DC=$domain,DC=$domainExt"
             New-ADGroup -Name "GG_$DepartementParent" -SamAccountName GG_$DepartementParent -GroupCategory Security -GroupScope Global -DisplayName "$DepartementParent" -Path "OU=GG,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe global $DepartementParent"
-            New-ADGroup -Name "GL_$DepartementParent._R" -SamAccountName GL_$DepartementParent.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.R" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
-            New-ADGroup -Name "GL_$DepartementParent_RW" -SamAccountName GL_$DepartementParent.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementParent.RW" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
+            New-ADGroup -Name GL_${DepartementParent}_R -SamAccountName GL_${DepartementParent}_R -GroupCategory Security -GroupScope DomainLocal -DisplayName GL_${DepartementParent}_R -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
+            New-ADGroup -Name GL_${DepartementParent}_RW -SamAccountName GL_${DepartementParent}_RW -GroupCategory Security -GroupScope DomainLocal -DisplayName GL_${DepartementParent}_RW -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local DepartementParent"
         }
     }
 
@@ -168,8 +168,8 @@ foreach ($Utilisateur in $ADUtilisateurs)
     }
     else{
         New-ADGroup -Name "GG_$DepartementEnfant" -SamAccountName GG_$DepartementEnfant -GroupCategory Security -GroupScope Global -DisplayName "$DepartementEnfant" -Path "OU=GG,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe global $DepartementParent"
-        New-ADGroup -Name "GL_$DepartementEnfant._R" -SamAccountName GL_$DepartementEnfant.R -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.R" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local $DepartementEnfant"
-        New-ADGroup -Name "GL_$DepartementEnfant._RW" -SamAccountName GL_$DepartementEnfant.RW -GroupCategory Security -GroupScope DomainLocal -DisplayName "GL_$DepartementEnfant.RW" -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local $DepartementEnfant"
+        New-ADGroup -Name GL_${DepartementEnfant}_R -SamAccountName GL_${DepartementEnfant}_R -GroupCategory Security -GroupScope DomainLocal -DisplayName GL_${DepartementEnfant}_R -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local $DepartementEnfant"
+        New-ADGroup -Name GL_${DepartementEnfant}_RW -SamAccountName GL_${DepartementEnfant}_RW -GroupCategory Security -GroupScope DomainLocal -DisplayName GL_${DepartementEnfant}_RW -Path "OU=GL,OU=groupes,DC=$domain,DC=$domainExt" -Description "Membre du groupe local $DepartementEnfant"
 
         if ($existingOU = Get-ADOrganizationalUnit -Filter "Name -like '$DepartementParent'"){
             Write-Warning "$DepartementParent existe."
